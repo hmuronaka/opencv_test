@@ -44,9 +44,9 @@ Mat threshold(const Mat& image, bool is_show) {
     return result_image;
 }
 
-Mat hough_lines(const Mat& image, vector<Vec4i>* points, bool is_show) {
+Mat hough_lines(const Mat& image, double rho, double theta, int threshold, double srn, double stn, vector<Vec4i>* points, bool is_show) {
     vector<Vec2f> lines;
-    HoughLines(image, lines, 5, CV_PI/180, 200, 10, 5);
+    HoughLines(image, lines, rho, theta, threshold, srn, stn);
     
     vector<Vec4i> result_lines;
     for( size_t i = 0; i < lines.size(); i++ )
@@ -111,9 +111,9 @@ Mat laplacian(const Mat& image, bool is_show) {
     return result_image;
 }
 
-Mat canny(const Mat& image, bool is_show) {
+Mat canny(const Mat& image, double threshold1, double threshold2, int apertureSize, bool L2gradient, bool is_show) {
     Mat result_image;
-    Canny(image, result_image, 224, 255, 3);
+    Canny(image, result_image, threshold1, threshold2, apertureSize, L2gradient);
     show_window("canny", result_image, is_show);
     return result_image;
 }
@@ -152,6 +152,12 @@ Mat convert_color(const Mat& mat, int value, bool is_show) {
     Mat result_image;
     cvtColor(mat, result_image, value);
     show_window("convert_color", result_image, is_show);
+    return result_image;
+}
+
+Mat resize(const Mat& image, Size dsize, double fx, double fy) {
+    Mat result_image;
+    cv::resize(image, result_image, dsize, fx, fy);
     return result_image;
 }
 

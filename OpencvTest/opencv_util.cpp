@@ -46,7 +46,7 @@ Mat threshold(const Mat& image, bool is_show) {
 
 Mat hough_lines(const Mat& image, vector<Vec4i>* points, bool is_show) {
     vector<Vec2f> lines;
-    HoughLines(image, lines, 1, CV_PI/180, 200, 10, 5);
+    HoughLines(image, lines, 5, CV_PI/180, 200, 10, 5);
     
     vector<Vec4i> result_lines;
     for( size_t i = 0; i < lines.size(); i++ )

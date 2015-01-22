@@ -72,19 +72,18 @@ Mat hough_lines(const Mat& image, double rho, double theta, int threshold, doubl
 }
 
 
-Mat hough_lines_p(const Mat& image, bool is_show) {
+Mat hough_lines_p(const Mat& image, double rho, double theta, int threshold, double srn, double stn, vector<Vec4i>* points, bool is_show) {
     vector<Vec4i> result_lines;
     
-    cv::HoughLinesP(image, result_lines, 1, CV_PI / 180 * 2, 100, 100, 5);
+    cv::HoughLinesP(image, result_lines, rho, theta, threshold, srn, stn);
     
     Mat result_image = Mat::zeros(image.rows, image.cols, image.type());
     result_image = draw_lines(result_image, result_lines);
     show_window("hough_lines_p", result_image, is_show);
     
-    vector<Point> points = get_points(result_lines);
-    result_image = draw_rectangle(image, points);
-    show_window("hough_lines_p_rectangle", result_image, is_show);
-    
+    if( points != NULL ) {
+        *points = result_lines;
+    }
     return result_image;
 }
 
@@ -119,10 +118,11 @@ Mat canny(const Mat& image, double threshold1, double threshold2, int apertureSi
 }
 
 
-Mat good_features_to_track(const Mat& image, vector<Point2f>* points, bool is_show) {
+Mat good_features_to_track(const Mat& image, int maxCorners, double qualityLevel, double minDistance, int blockSize,
+                           bool useHarrisDetector, double k, vector<Point2f>* points, bool is_show) {
     Mat result = image;
     vector<Point2f> corners;
-    goodFeaturesToTrack(image, corners, 4, 0.01, 100, Mat(), 5, false);
+    goodFeaturesToTrack(image, corners, maxCorners, qualityLevel, minDistance, Mat(), blockSize, useHarrisDetector, k);
     vector<Point2f>::iterator ite = corners.begin();
     while( ite != corners.end() ) {
         circle(result, Point(ite->x, ite->y), 4, Scalar(0, 0, 255), -1);
@@ -140,6 +140,7 @@ Mat delete_noize(const Mat& image, int value, bool is_show) {
     Mat result_image;
     cv::erode(image, result_image, Mat(), Point(-1, -1), value);
     cv::dilate(result_image, result_image, Mat(), Point(-1, -1), value);
+    print_mat(result_image);
     show_window("delete_noize", result_image, is_show);
     return result_image;
 }
@@ -163,7 +164,7 @@ Mat resize(const Mat& image, Size dsize, double fx, double fy) {
 
 Mat draw_lines(const Mat& mat, const vector<Vec4i>& lines) {
     Mat result_image = mat;
-    cvtColor(result_image, result_image, CV_GRAY2BGR);
+//    cvtColor(result_image, result_image, CV_GRAY2BGR);
     
     for(size_t i = 0; i < lines.size(); i++) {
         cv::line(result_image, Point(lines[i][0], lines[i][1]), Point(lines[i][2], lines[i][3]), Scalar(255, 128, 0), 1, 8);
@@ -227,4 +228,129 @@ vector<Point> get_points(const vector<Vec4i>& lines) {
     result.push_back(leftBottom);
     result.push_back(rightBottom);
     return result;
+}
+
+void print_mat(const Mat& r1) {
+    // 行数
+    std::cout << "rows:" << r1.rows <<std::endl;
+    // 列数
+    std::cout << "cols:" << r1.cols << std::endl;
+    // 次元数
+    std::cout << "dims:" << r1.dims << std::endl;
+    // サイズ（2次元の場合）
+    std::cout << "size[]:" << r1.size().width << "," << r1.size().height << std::endl;
+    // ビット深度ID
+    std::cout << "depth (ID):" << r1.depth() << "(=" << CV_32F << ")" << std::endl;
+    // チャンネル数
+    std::cout << "channels:" << r1.channels() << std::endl;
+    // （複数チャンネルから成る）1要素のサイズ [バイト単位]
+    std::cout << "elemSize:" << r1.elemSize() << "[byte]" << std::endl;
+    // 1要素内の1チャンネル分のサイズ [バイト単位]
+    std::cout << "elemSize1 (elemSize/channels):" << r1.elemSize1() << "[byte]" << std::endl;
+    // 要素の総数
+    std::cout << "total:" << r1.total() << std::endl;
+    // ステップ数 [バイト単位]
+    std::cout << "step:" << r1.step << "[byte]" << std::endl;
+    // 1ステップ内のチャンネル総数
+    std::cout << "step1 (step/elemSize1):" << r1.step1()  << std::endl;
+    // データは連続か？
+    std::cout << "isContinuous:" << (r1.isContinuous()?"true":"false") << std::endl;
+    // 部分行列か？
+    std::cout << "isSubmatrix:" << (r1.isSubmatrix()?"true":"false") << std::endl;
+    // データは空か？
+    std::cout << "empty:" << (r1.empty()?"true":"false") << std::endl;
+}
+
+Mat delete_box(const Mat& image, bool is_show) {
+    Mat result_image = image;
+    
+    const int white_color = 170;
+    const int box_color = 90;
+    const int black_color = 60;
+    
+    int count = 0;
+    int prev_color = -1;
+    int fill_color = -1;
+    int state = 0; // 0:init 1:in_paper 2:box 3: outer
+    for(int row_idx = 0; row_idx < result_image.rows; row_idx++) {
+        count = 0;
+        state = 0;
+        for(int col_idx = 0; col_idx < result_image.cols; col_idx++) {
+            int pos = row_idx * result_image.cols + col_idx;
+            int color = result_image.data[pos];
+            if( prev_color == -1 ) {
+                prev_color = color;
+            }
+            
+            int temp_color = color;
+            if( abs(prev_color - color) < 50 ) {
+                if( fill_color == -1 ) {
+                    fill_color = prev_color;
+                }
+                color = prev_color;
+            } else {
+                fill_color = -1;
+            }
+            prev_color = temp_color;
+//            if( state == 0 ) {
+//                if( color > white_color ) {
+//                    count++;
+//                    if( count > 5 ) {
+//                        count = 0;
+//                        state = 1;
+//                    }
+//                    color = 255;
+//                }
+//            } else if( state == 1 ) {
+//                if( color < black_color ) {
+//                    count++;
+//                    if( count > 3 ) {
+//                        count = 0;
+//                        state = 3;
+//                    }
+//                    color = 0;
+//                } else if( color < box_color ) {
+//                    count++;
+//                    if( count > 5 ) {
+//                        count = 0;
+//                        state = 2;
+//                    }
+//                    color = 255;
+//                } else {
+//                    color = 255;
+//                }
+//            } else if( state == 2 ) {
+//                if( color > white_color ) {
+//                    count++;
+//                    if( count > 10 ) {
+//                        count = 0;
+//                        state = 1;
+//                    }
+//                    color = 255;
+//                } else if( color < black_color ) {
+//                    count++;
+//                    if( count > 10 ) {
+//                        count = 0;
+//                        state = 3;
+//                    }
+//                } else {
+//                    color = 255;
+//                }
+//            } else {
+//                if( color > white_color) {
+//                    count++;
+//                    if( count > 5 ) {
+//                        state = 1;
+//                        count = 0;
+//                    }
+//                    color = 255;
+//                } else {
+//                    color = 0;
+//                }
+//            }
+            result_image.data[pos] = color;
+        }
+    }
+    show_window("delete_box", result_image, is_show);
+    return result_image;
 }

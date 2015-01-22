@@ -20,17 +20,38 @@ Mat testcase1(const Mat& image) {
     bool is_show = false;
     vector<Vec4i> points;
     
-    hough_lines(
-                 canny(
-                       delete_noize(image, 10)
-                       , 80, 255, 3, false, is_show)
+    hough_lines_p(
+                canny(
+                      delete_noize(image, 10, is_show)
+                     
+                      , 80, 255, 3, false, is_show)
                 , 1, CV_PI / 180, 100, 0, 0, &points, is_show);
     
-    Mat result_image = draw_lines(image, points);
+    vector<Point> rectangle = get_points(points);
+    Mat result_image = draw_rectangle(image, rectangle);
+    
+//    Mat result_image = draw_lines(image, points);
     show_window("result", result_image);
     
     return result_image;
 }
+
+Mat testcase2(const Mat& image) {
+    bool is_show = false;
+    vector<Vec4i> points;
+    
+    Mat result_image = good_features_to_track(
+        hough_lines(
+                canny(
+                      delete_noize(image, 10, is_show)
+                      , 80, 255, 3, false, is_show)
+                    , 1, CV_PI / 180, 100, 0, 0, &points, is_show), 8, 0.05, 10, 2);
+    
+    show_window("result", result_image);
+    
+    return result_image;
+}
+
 
 int main (int argc, char **argv)
 {
@@ -50,8 +71,7 @@ int main (int argc, char **argv)
         }
         
         if( !image.data ) {
-            cout << "end.";
-            break;
+            continue;
         }
         image = resize(image, Size(), 0.2, 0.2);
         Mat result_image = testcase1(image);

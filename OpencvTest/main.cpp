@@ -33,7 +33,6 @@ double distance(const Point& pt1, const Point& pt2);
 Mat draw_lines(const Mat& mat, const vector<Vec4i>& lines);
 void show_window(const string& window_name, const Mat& mat);
 Mat convert_color(const Mat& mat, int val);
-vector<Vec4i> judge_points(const Mat& mat, const vector<Vec4i>& lines);
 
 static const string IMAGE_FILEPATH="/Users/h_muronaka/Documents/opencv samples/sample001.jpg";
 static const string OUT_FILEPATH="/Users/h_muronaka/Documents/opencv samples/temp.jpg";
@@ -77,7 +76,6 @@ int main (int argc, char **argv)
 //                                      laplacian(
 //                                                //delete_noize(
 //                                                threshold(image))));
-    points = judge_points(threshold(image), points);
     
     
     
@@ -385,9 +383,4 @@ Mat convert_color(const Mat& mat, int value) {
     Mat result_image;
     cvtColor(mat, result_image, value);
     return result_image;
-}
-
-
-vector<Vec4i> judge_points(const Mat& mat, const vector<Vec4i>& lines) {
-    Mat
 }

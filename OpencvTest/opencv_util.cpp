@@ -140,7 +140,6 @@ Mat delete_noize(const Mat& image, int value, bool is_show) {
     Mat result_image;
     cv::erode(image, result_image, Mat(), Point(-1, -1), value);
     cv::dilate(result_image, result_image, Mat(), Point(-1, -1), value);
-    print_mat(result_image);
     show_window("delete_noize", result_image, is_show);
     return result_image;
 }
